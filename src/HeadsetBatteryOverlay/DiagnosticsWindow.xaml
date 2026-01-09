@@ -1,0 +1,37 @@
+<Window x:Class="HeadsetBatteryOverlay.DiagnosticsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Diagnostics"
+        Width="980" Height="560"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="10"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="10"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock TextWrapping="Wrap">
+            hidapi enumeration for supported VIDs/PIDs. Highest Usage/UsagePage is what the original app selects.
+        </TextBlock>
+
+        <DataGrid x:Name="GridDevices" Grid.Row="2" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="VID" Binding="{Binding Vid}" Width="80"/>
+                <DataGridTextColumn Header="PID" Binding="{Binding Pid}" Width="80"/>
+                <DataGridTextColumn Header="Usage" Binding="{Binding Usage}" Width="80"/>
+                <DataGridTextColumn Header="UsagePage" Binding="{Binding UsagePage}" Width="90"/>
+                <DataGridTextColumn Header="Manufacturer" Binding="{Binding Manufacturer}" Width="220"/>
+                <DataGridTextColumn Header="Product" Binding="{Binding Product}" Width="280"/>
+                <DataGridTextColumn Header="Path (trunc)" Binding="{Binding PathShort}" Width="*"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="BtnRefresh" Content="Refresh" Width="100" Margin="0,0,10,0"/>
+            <Button x:Name="BtnCopy" Content="Copy Selected Path" Width="160"/>
+        </StackPanel>
+    </Grid>
+</Window>

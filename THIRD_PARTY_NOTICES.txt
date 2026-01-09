@@ -1,0 +1,17 @@
+THIRD-PARTY NOTICES
+
+This repository includes or depends on third-party components.
+
+1) HIDAPI (hidapi.dll)
+   Source: HIDAPI project (libusb/hidapi)
+   Upstream: https://github.com/libusb/hidapi
+
+   License: BSD 3-Clause (see:
+     src/HeadsetBatteryOverlay/third_party/hidapi/licenses/LICENSE-bsd.txt)
+
+   Notes:
+   - This application uses P/Invoke to call a native HIDAPI library named
+     "hidapi.dll" on Windows.
+   - The repository does not contain HIDAPI source code. You must obtain a
+     Windows x64 build of "hidapi.dll" yourself and place it at:
+       src/HeadsetBatteryOverlay/third_party/hidapi/x64/hidapi.dll
