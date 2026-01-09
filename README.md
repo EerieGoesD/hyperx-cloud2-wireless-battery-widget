@@ -1,22 +1,27 @@
 # HeadsetBatteryOverlay
 
-Always-on-top, draggable Windows overlay that shows the **battery percentage** of the **HyperX Cloud II Wireless** headset in real time.
+Always-on-top, draggable Windows widget that shows the **battery percentage** of the **HyperX Cloud II Wireless** headset in real time.
 
-## Run
-- Launch the app.
-- Drag the widget to reposition it.
-- Use **“-”** / **“+”** to toggle compact mode.
+## Releases
+### (no dependencies)
+- **HeadsetBatteryOverlay-win-x64-selfcontained.zip**
+- Works on any Windows 10/11 machine
+- No .NET installation required
 
-## Build (developers)
+### Portable
+- **HeadsetBatteryOverlay-win-x64.zip**
+- Requires **.NET Desktop Runtime 8.x** installed
+
+Steps:
+1. Download the zip
+2. Extract it
+3. Run `HeadsetBatteryOverlay.exe`
+
+## Build
 Requirements:
 - Windows 10/11
 - Visual Studio 2022
 - .NET 8 SDK
-
-Steps:
-1. Open `HeadsetBatteryOverlay_HidApi.sln`
-2. Select **x64**
-3. Build and run (F5) or build Release and run the produced EXE
 
 ## Third-party (HIDAPI)
 This project uses HIDAPI for USB/HID communication.
