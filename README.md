@@ -2,12 +2,6 @@
 
 Always-on-top, draggable Windows overlay that shows the **battery percentage** of the **HyperX Cloud II Wireless** headset in real time.
 
-Includes:
-- Compact mode toggle: **“-”** to show only `50%`, **“+”** to restore full view
-- Links:
-  - Made by EERIE → https://linktr.ee/eeriegoesd
-  - Buy Me a Coffee → https://buymeacoffee.com/eeriegoesd
-
 ## Run
 - Launch the app.
 - Drag the widget to reposition it.
