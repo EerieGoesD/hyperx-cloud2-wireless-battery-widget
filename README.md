@@ -13,11 +13,6 @@ Always-on-top, draggable Windows widget that shows the **battery percentage** of
 - **HeadsetBatteryOverlay-win-x64.zip**
 - Requires **.NET Desktop Runtime 8.x**
 
-Steps:
-1. Download the zip
-2. Extract it
-3. Run `HeadsetBatteryOverlay.exe`
-
 ## Build
 Requirements:
 - Windows 10/11
