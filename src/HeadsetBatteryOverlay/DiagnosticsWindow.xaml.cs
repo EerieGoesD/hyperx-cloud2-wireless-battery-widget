@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 
@@ -29,6 +28,6 @@ public partial class DiagnosticsWindow : Window
     private void CopySelected()
     {
         if (GridDevices.SelectedItem is not HidApiDeviceInfoRow row) return;
-        Clipboard.SetText(row.Path);
+        System.Windows.Clipboard.SetText(row.Path);
     }
 }

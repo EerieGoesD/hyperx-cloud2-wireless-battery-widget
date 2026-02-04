@@ -5,5 +5,3 @@
 *.suo
 *.pdb
 *.log
-# optional if you don't want to commit the DLL:
-# src/HeadsetBatteryOverlay/third_party/hidapi/x64/hidapi.dll

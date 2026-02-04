@@ -1,23 +1,23 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
-using System.Windows.Threading;
+using System.Windows.Interop;
+using System.Windows.Media;
 using System.Windows.Navigation;
-using System.Diagnostics;
+using WinForms = System.Windows.Forms;
 
 namespace HeadsetBatteryOverlay;
 
 public partial class OverlayWindow : Window
 {
-
     private const double ExpandedWidth = 220;
     private const double ExpandedHeight = 104;
-        private const double CompactWidth = 120;
-        private const double CompactHeight = 60;
+    private const double CompactWidth = 120;
+    private const double CompactHeight = 60;
     private bool _isCompact;
 
-    private readonly DispatcherTimer _timer;
     private readonly BatteryPoller _poller;
 
     private readonly string _statePath = Path.Combine(
@@ -35,6 +35,7 @@ public partial class OverlayWindow : Window
         Loaded += (_, _) =>
         {
             RestoreWindowPositionOrDefault();
+            SnapToVisibleArea(); // <- clamp depois de restaurar coords
             InstallContextMenu();
             StartPolling();
         };
@@ -43,9 +44,53 @@ public partial class OverlayWindow : Window
         {
             try { DragMove(); SaveWindowPosition(); } catch { }
         };
+    }
 
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
-        _timer.Tick += async (_, _) => await RefreshAsync();
+    private void SnapToVisibleArea()
+    {
+        // Ensure layout is measured so ActualWidth/Height are valid
+        if (ActualWidth <= 0 || ActualHeight <= 0)
+            UpdateLayout();
+
+        double wDip = (ActualWidth > 0) ? ActualWidth : Width;
+        double hDip = (ActualHeight > 0) ? ActualHeight : Height;
+
+        // Get the monitor that currently contains the window (or nearest)
+        var hwnd = new WindowInteropHelper(this).Handle;
+        var screen = WinForms.Screen.FromHandle(hwnd);
+        var waPx = screen.WorkingArea; // pixels
+
+        // Convert monitor working area from pixels -> WPF DIPs for this window
+        var dpi = VisualTreeHelper.GetDpi(this);
+        double scaleX = dpi.DpiScaleX;
+        double scaleY = dpi.DpiScaleY;
+
+        double leftBoundDip = waPx.Left / scaleX;
+        double topBoundDip = waPx.Top / scaleY;
+        double rightBoundDip = waPx.Right / scaleX;
+        double bottomBoundDip = waPx.Bottom / scaleY;
+
+        const double marginDip = 12;
+
+        // If Left/Top are NaN or outside bounds, snap to top-right of that monitor
+        bool invalid = double.IsNaN(Left) || double.IsNaN(Top);
+
+        bool offScreen =
+            invalid ||
+            (Left + wDip) < leftBoundDip ||
+            Left > rightBoundDip ||
+            (Top + hDip) < topBoundDip ||
+            Top > bottomBoundDip;
+
+        if (offScreen)
+        {
+            Left = rightBoundDip - wDip - marginDip;
+            Top = topBoundDip + marginDip;
+        }
+
+        // Always clamp (covers edge cases and DPI/layout changes)
+        Left = Math.Max(leftBoundDip, Math.Min(Left, rightBoundDip - wDip));
+        Top = Math.Max(topBoundDip, Math.Min(Top, bottomBoundDip - hDip));
     }
 
     private void InstallContextMenu()
@@ -59,11 +104,7 @@ public partial class OverlayWindow : Window
         diagnostics.Click += (_, _) => new DiagnosticsWindow { Owner = this }.Show();
 
         var exit = new System.Windows.Controls.MenuItem { Header = "Exit" };
-        exit.Click += (_, _) =>
-        {
-            _timer.Stop();
-            Application.Current.Shutdown();
-        };
+        exit.Click += (_, _) => System.Windows.Application.Current.Shutdown();
 
         menu.Items.Add(refresh);
         menu.Items.Add(diagnostics);
@@ -75,13 +116,14 @@ public partial class OverlayWindow : Window
 
     private void StartPolling()
     {
-        _timer.Start();
-        _ = RefreshAsync();
+        _ = RefreshAsync(); // one-time refresh on launch
     }
+
+    // Exposed for tray icon "Refresh now"
+    public System.Threading.Tasks.Task RefreshFromTrayAsync() => RefreshAsync();
 
     private async System.Threading.Tasks.Task RefreshAsync()
     {
-        StatusText.Text = "Reading...";
         var result = await _poller.TryReadBatteryAsync();
 
         if (!result.Success)
@@ -122,7 +164,6 @@ public partial class OverlayWindow : Window
         else BatteryFill.Fill = System.Windows.Media.Brushes.OrangeRed;
     }
 
-
     private void SetCompactMode(bool compact)
     {
         _isCompact = compact;
@@ -133,12 +174,13 @@ public partial class OverlayWindow : Window
         BtnCompact.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         BtnExpand.Visibility = compact ? Visibility.Visible : Visibility.Collapsed;
 
-        // Align percent in compact mode
         PercentRow.HorizontalAlignment = compact ? System.Windows.HorizontalAlignment.Center : System.Windows.HorizontalAlignment.Left;
         RightPanel.HorizontalAlignment = compact ? System.Windows.HorizontalAlignment.Center : System.Windows.HorizontalAlignment.Left;
 
         Width = compact ? CompactWidth : ExpandedWidth;
         Height = compact ? CompactHeight : ExpandedHeight;
+
+        SnapToVisibleArea(); // <- clamp após resize
     }
 
     private void BtnCompact_Click(object sender, RoutedEventArgs e)
@@ -185,7 +227,10 @@ public partial class OverlayWindow : Window
             Directory.CreateDirectory(Path.GetDirectoryName(_statePath)!);
 
             var state = new WindowStateModel { Left = Left, Top = Top };
-            File.WriteAllText(_statePath, JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true }));
+            File.WriteAllText(_statePath, JsonSerializer.Serialize(
+                state,
+                new JsonSerializerOptions { WriteIndented = true }
+            ));
         }
         catch { }
     }
@@ -197,6 +242,7 @@ public partial class OverlayWindow : Window
             Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
         }
         catch { }
+
         e.Handled = true;
     }
 
