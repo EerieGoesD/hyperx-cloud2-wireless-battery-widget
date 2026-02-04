@@ -48,19 +48,16 @@ public partial class OverlayWindow : Window
 
     private void SnapToVisibleArea()
     {
-        // Ensure layout is measured so ActualWidth/Height are valid
         if (ActualWidth <= 0 || ActualHeight <= 0)
             UpdateLayout();
 
         double wDip = (ActualWidth > 0) ? ActualWidth : Width;
         double hDip = (ActualHeight > 0) ? ActualHeight : Height;
 
-        // Get the monitor that currently contains the window (or nearest)
         var hwnd = new WindowInteropHelper(this).Handle;
         var screen = WinForms.Screen.FromHandle(hwnd);
         var waPx = screen.WorkingArea; // pixels
 
-        // Convert monitor working area from pixels -> WPF DIPs for this window
         var dpi = VisualTreeHelper.GetDpi(this);
         double scaleX = dpi.DpiScaleX;
         double scaleY = dpi.DpiScaleY;
@@ -72,7 +69,6 @@ public partial class OverlayWindow : Window
 
         const double marginDip = 12;
 
-        // If Left/Top are NaN or outside bounds, snap to top-right of that monitor
         bool invalid = double.IsNaN(Left) || double.IsNaN(Top);
 
         bool offScreen =
@@ -88,7 +84,6 @@ public partial class OverlayWindow : Window
             Top = topBoundDip + marginDip;
         }
 
-        // Always clamp (covers edge cases and DPI/layout changes)
         Left = Math.Max(leftBoundDip, Math.Min(Left, rightBoundDip - wDip));
         Top = Math.Max(topBoundDip, Math.Min(Top, bottomBoundDip - hDip));
     }
@@ -116,10 +111,9 @@ public partial class OverlayWindow : Window
 
     private void StartPolling()
     {
-        _ = RefreshAsync(); // one-time refresh on launch
+        _ = RefreshAsync();
     }
 
-    // Exposed for tray icon "Refresh now"
     public System.Threading.Tasks.Task RefreshFromTrayAsync() => RefreshAsync();
 
     private async System.Threading.Tasks.Task RefreshAsync()
@@ -180,7 +174,7 @@ public partial class OverlayWindow : Window
         Width = compact ? CompactWidth : ExpandedWidth;
         Height = compact ? CompactHeight : ExpandedHeight;
 
-        SnapToVisibleArea(); // <- clamp após resize
+        SnapToVisibleArea();
     }
 
     private void BtnCompact_Click(object sender, RoutedEventArgs e)
