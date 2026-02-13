@@ -1,6 +1,7 @@
 // App.xaml.cs
 using System;
 using System.Drawing;
+using System.IO;
 using System.Windows;
 using System.Windows.Forms;
 
@@ -26,11 +27,13 @@ public partial class App : System.Windows.Application
 
     private void CreateTrayIcon()
     {
+        var iconPath = Path.Combine(AppContext.BaseDirectory, "tray.ico");
+
         _tray = new NotifyIcon
         {
             Text = "Headset Battery Overlay",
             Visible = true,
-            Icon = new Icon("tray.ico")
+            Icon = new Icon(iconPath)
         };
 
         var menu = new ContextMenuStrip();

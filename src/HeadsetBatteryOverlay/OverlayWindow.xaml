@@ -7,7 +7,7 @@
         AllowsTransparency="True"
         Background="Transparent"
         Topmost="True"
-        ShowInTaskbar="False"
+        ShowInTaskbar="True"
         ResizeMode="NoResize"
         WindowStartupLocation="Manual">
     <Border CornerRadius="10" Background="#CC111111" Padding="10" BorderBrush="#55FFFFFF" BorderThickness="1">
