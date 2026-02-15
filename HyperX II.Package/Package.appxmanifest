@@ -9,7 +9,7 @@
   <Identity
     Name="20715EerieGoesD.43842D31FB0DD"
     Publisher="CN=A2A89A47-0B2B-4C32-B85C-9753888A9FFC"
-    Version="1.1.4.0" />
+    Version="1.5.9.0" />
 
   <Properties>
     <DisplayName>HyperX Cloud II Battery Widget</DisplayName>

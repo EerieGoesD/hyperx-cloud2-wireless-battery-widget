@@ -1,11 +1,15 @@
+// OverlayWindow.xaml.cs
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Navigation;
+using System.Windows.Threading;
 using WinForms = System.Windows.Forms;
 
 namespace HeadsetBatteryOverlay;
@@ -14,9 +18,12 @@ public partial class OverlayWindow : Window
 {
     private const double ExpandedWidth = 220;
     private const double ExpandedHeight = 104;
-    private const double CompactWidth = 120;
-    private const double CompactHeight = 60;
     private bool _isCompact;
+
+    // Polling
+    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(15);
+    private readonly DispatcherTimer _pollTimer = new();
+    private int _refreshInProgress = 0;
 
     private readonly BatteryPoller _poller;
 
@@ -35,7 +42,7 @@ public partial class OverlayWindow : Window
         Loaded += (_, _) =>
         {
             RestoreWindowPositionOrDefault();
-            SnapToVisibleArea(); // <- clamp depois de restaurar coords
+            SnapToVisibleArea();
             InstallContextMenu();
             StartPolling();
         };
@@ -46,93 +53,50 @@ public partial class OverlayWindow : Window
         };
     }
 
-    private void SnapToVisibleArea()
+    protected override void OnClosed(EventArgs e)
     {
-        if (ActualWidth <= 0 || ActualHeight <= 0)
-            UpdateLayout();
-
-        double wDip = (ActualWidth > 0) ? ActualWidth : Width;
-        double hDip = (ActualHeight > 0) ? ActualHeight : Height;
-
-        var hwnd = new WindowInteropHelper(this).Handle;
-        var screen = WinForms.Screen.FromHandle(hwnd);
-        var waPx = screen.WorkingArea; // pixels
-
-        var dpi = VisualTreeHelper.GetDpi(this);
-        double scaleX = dpi.DpiScaleX;
-        double scaleY = dpi.DpiScaleY;
-
-        double leftBoundDip = waPx.Left / scaleX;
-        double topBoundDip = waPx.Top / scaleY;
-        double rightBoundDip = waPx.Right / scaleX;
-        double bottomBoundDip = waPx.Bottom / scaleY;
-
-        const double marginDip = 12;
-
-        bool invalid = double.IsNaN(Left) || double.IsNaN(Top);
-
-        bool offScreen =
-            invalid ||
-            (Left + wDip) < leftBoundDip ||
-            Left > rightBoundDip ||
-            (Top + hDip) < topBoundDip ||
-            Top > bottomBoundDip;
-
-        if (offScreen)
-        {
-            Left = rightBoundDip - wDip - marginDip;
-            Top = topBoundDip + marginDip;
-        }
-
-        Left = Math.Max(leftBoundDip, Math.Min(Left, rightBoundDip - wDip));
-        Top = Math.Max(topBoundDip, Math.Min(Top, bottomBoundDip - hDip));
-    }
-
-    private void InstallContextMenu()
-    {
-        var menu = new System.Windows.Controls.ContextMenu();
-
-        var refresh = new System.Windows.Controls.MenuItem { Header = "Refresh now" };
-        refresh.Click += async (_, _) => await RefreshAsync();
-
-        var diagnostics = new System.Windows.Controls.MenuItem { Header = "Diagnostics" };
-        diagnostics.Click += (_, _) => new DiagnosticsWindow { Owner = this }.Show();
-
-        var exit = new System.Windows.Controls.MenuItem { Header = "Exit" };
-        exit.Click += (_, _) => System.Windows.Application.Current.Shutdown();
-
-        menu.Items.Add(refresh);
-        menu.Items.Add(diagnostics);
-        menu.Items.Add(new System.Windows.Controls.Separator());
-        menu.Items.Add(exit);
-
-        ContextMenu = menu;
+        _pollTimer.Stop();
+        base.OnClosed(e);
     }
 
     private void StartPolling()
     {
+        _pollTimer.Interval = PollInterval;
+        _pollTimer.Tick += async (_, _) => await RefreshAsync();
+        _pollTimer.Start();
+
         _ = RefreshAsync();
     }
 
-    public System.Threading.Tasks.Task RefreshFromTrayAsync() => RefreshAsync();
+    public Task RefreshFromTrayAsync() => RefreshAsync();
 
-    private async System.Threading.Tasks.Task RefreshAsync()
+    private async Task RefreshAsync()
     {
-        var result = await _poller.TryReadBatteryAsync();
-
-        if (!result.Success)
-        {
-            PercentText.Text = "--%";
-            StatusText.Text = result.Message;
-            SetFill(0, isUnknown: true);
+        if (Interlocked.Exchange(ref _refreshInProgress, 1) == 1)
             return;
+
+        try
+        {
+            var result = await _poller.TryReadBatteryAsync();
+
+            if (!result.Success)
+            {
+                PercentText.Text = "--%";
+                StatusText.Text = result.Message;
+                SetFill(0, isUnknown: true);
+                return;
+            }
+
+            var pct = Math.Clamp(result.BatteryPercent, 0, 100);
+            PercentText.Text = $"{pct}%";
+            StatusText.Text = result.DeviceLabel;
+
+            SetFill(pct, isUnknown: false);
         }
-
-        var pct = Math.Clamp(result.BatteryPercent, 0, 100);
-        PercentText.Text = $"{pct}%";
-        StatusText.Text = result.DeviceLabel;
-
-        SetFill(pct, isUnknown: false);
+        finally
+        {
+            Interlocked.Exchange(ref _refreshInProgress, 0);
+        }
     }
 
     private void SetFill(int percent, bool isUnknown)
@@ -171,9 +135,27 @@ public partial class OverlayWindow : Window
         PercentRow.HorizontalAlignment = compact ? System.Windows.HorizontalAlignment.Center : System.Windows.HorizontalAlignment.Left;
         RightPanel.HorizontalAlignment = compact ? System.Windows.HorizontalAlignment.Center : System.Windows.HorizontalAlignment.Left;
 
-        Width = compact ? CompactWidth : ExpandedWidth;
-        Height = compact ? CompactHeight : ExpandedHeight;
+        ColSpacer.Width = compact ? new GridLength(0) : new GridLength(10);
 
+        if (compact)
+        {
+            SizeToContent = SizeToContent.WidthAndHeight;
+
+            RootBorder.Padding = new Thickness(6, 4, 6, 4);
+            RootBorder.CornerRadius = new CornerRadius(6);
+        }
+        else
+        {
+            SizeToContent = SizeToContent.Manual;
+
+            RootBorder.Padding = new Thickness(10);
+            RootBorder.CornerRadius = new CornerRadius(10);
+
+            Width = ExpandedWidth;
+            Height = ExpandedHeight;
+        }
+
+        UpdateLayout();
         SnapToVisibleArea();
     }
 
@@ -187,6 +169,69 @@ public partial class OverlayWindow : Window
     {
         SetCompactMode(false);
         SaveWindowPosition();
+    }
+
+    private void InstallContextMenu()
+    {
+        var menu = new System.Windows.Controls.ContextMenu();
+
+        var refresh = new System.Windows.Controls.MenuItem { Header = "Refresh now" };
+        refresh.Click += async (_, _) => await RefreshAsync();
+
+        var diagnostics = new System.Windows.Controls.MenuItem { Header = "Diagnostics" };
+        diagnostics.Click += (_, _) => new DiagnosticsWindow { Owner = this }.Show();
+
+        var exit = new System.Windows.Controls.MenuItem { Header = "Exit" };
+        exit.Click += (_, _) => System.Windows.Application.Current.Shutdown();
+
+        menu.Items.Add(refresh);
+        menu.Items.Add(diagnostics);
+        menu.Items.Add(new System.Windows.Controls.Separator());
+        menu.Items.Add(exit);
+
+        ContextMenu = menu;
+    }
+
+    private void SnapToVisibleArea()
+    {
+        if (ActualWidth <= 0 || ActualHeight <= 0)
+            UpdateLayout();
+
+        double wDip = (ActualWidth > 0) ? ActualWidth : Width;
+        double hDip = (ActualHeight > 0) ? ActualHeight : Height;
+
+        var hwnd = new WindowInteropHelper(this).Handle;
+        var screen = WinForms.Screen.FromHandle(hwnd);
+        var waPx = screen.WorkingArea;
+
+        var dpi = VisualTreeHelper.GetDpi(this);
+        double scaleX = dpi.DpiScaleX;
+        double scaleY = dpi.DpiScaleY;
+
+        double leftBoundDip = waPx.Left / scaleX;
+        double topBoundDip = waPx.Top / scaleY;
+        double rightBoundDip = waPx.Right / scaleX;
+        double bottomBoundDip = waPx.Bottom / scaleY;
+
+        const double marginDip = 12;
+
+        bool invalid = double.IsNaN(Left) || double.IsNaN(Top);
+
+        bool offScreen =
+            invalid ||
+            (Left + wDip) < leftBoundDip ||
+            Left > rightBoundDip ||
+            (Top + hDip) < topBoundDip ||
+            Top > bottomBoundDip;
+
+        if (offScreen)
+        {
+            Left = rightBoundDip - wDip - marginDip;
+            Top = topBoundDip + marginDip;
+        }
+
+        Left = Math.Max(leftBoundDip, Math.Min(Left, rightBoundDip - wDip));
+        Top = Math.Max(topBoundDip, Math.Min(Top, bottomBoundDip - hDip));
     }
 
     private void RestoreWindowPositionOrDefault()
