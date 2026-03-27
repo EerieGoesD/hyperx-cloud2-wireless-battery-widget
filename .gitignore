@@ -394,11 +394,16 @@ FodyWeavers.xsd
 *.cab
 *.msi
 *.msix
+*.msixbundle
 *.msm
 *.msp
 
 # MSIX packaging layout
 msix_layout/
+bundle_input/
+
+# Release zips
+*.zip
 
 # JetBrains Rider
 *.sln.iml
