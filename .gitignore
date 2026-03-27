@@ -397,5 +397,8 @@ FodyWeavers.xsd
 *.msm
 *.msp
 
+# MSIX packaging layout
+msix_layout/
+
 # JetBrains Rider
 *.sln.iml

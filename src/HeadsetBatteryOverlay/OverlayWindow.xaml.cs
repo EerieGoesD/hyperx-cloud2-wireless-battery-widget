@@ -16,12 +16,13 @@ namespace HeadsetBatteryOverlay;
 
 public partial class OverlayWindow : Window
 {
-    private const double ExpandedWidth = 220;
-    private const double ExpandedHeight = 104;
+    private const double ExpandedWidth = 300;
+    private const double ExpandedHeight = 138;
     private bool _isCompact;
 
     // Polling
-    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan FastPollInterval = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan NormalPollInterval = TimeSpan.FromSeconds(15);
     private readonly DispatcherTimer _pollTimer = new();
     private int _refreshInProgress = 0;
 
@@ -61,7 +62,7 @@ public partial class OverlayWindow : Window
 
     private void StartPolling()
     {
-        _pollTimer.Interval = PollInterval;
+        _pollTimer.Interval = FastPollInterval;
         _pollTimer.Tick += async (_, _) => await RefreshAsync();
         _pollTimer.Start();
 
@@ -84,6 +85,7 @@ public partial class OverlayWindow : Window
                 PercentText.Text = "--%";
                 StatusText.Text = result.Message;
                 SetFill(0, isUnknown: true);
+                _pollTimer.Interval = FastPollInterval;
                 return;
             }
 
@@ -92,6 +94,7 @@ public partial class OverlayWindow : Window
             StatusText.Text = result.DeviceLabel;
 
             SetFill(pct, isUnknown: false);
+            _pollTimer.Interval = NormalPollInterval;
         }
         finally
         {
@@ -272,6 +275,11 @@ public partial class OverlayWindow : Window
             ));
         }
         catch { }
+    }
+
+    private void ChkTopmost_Changed(object sender, RoutedEventArgs e)
+    {
+        Topmost = ChkTopmost.IsChecked == true;
     }
 
     private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
