@@ -1,0 +1,39 @@
+title: "[Feedback] "
+labels: ["feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to share your feedback on **HyperX Cloud II Battery Widget**!
+        Your input helps make this tool better for everyone.
+
+  - type: dropdown
+    id: feedback-type
+    attributes:
+      label: Feedback Type
+      description: What kind of feedback are you sharing?
+      options:
+        - Feature Request
+        - UI / Design Suggestion
+        - General Feedback
+        - Question
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Tell us what's on your mind.
+      placeholder: Describe your feedback, idea, or question...
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any screenshots, links, or extra info that might help.
+      placeholder: Paste screenshots or add details here...
+    validations:
+      required: false
