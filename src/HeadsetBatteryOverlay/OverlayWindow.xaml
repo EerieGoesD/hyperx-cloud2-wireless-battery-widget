@@ -42,7 +42,7 @@
                 </TextBlock>
 
                 <TextBlock Margin="0,2,0,0" FontSize="10" HorizontalAlignment="Center">
-                    <Hyperlink NavigateUri="https://buymeacoffee.com/eeriegoesd" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#EAB308" TextDecorations="">Buy Me a Coffee</Hyperlink>
+                    <Hyperlink NavigateUri="https://buymeacoffee.com/eeriegoesd" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#EAB308" TextDecorations="">Support This Project</Hyperlink>
                 </TextBlock>
 
                 <TextBlock Margin="0,2,0,0" FontSize="10" HorizontalAlignment="Center">
